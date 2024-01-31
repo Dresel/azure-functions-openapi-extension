@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.TestApp.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.TestApp
@@ -53,6 +54,18 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.TestApp
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(KeyValuePair<string,bool>), Description = "The OK response")]
         public static async Task<IActionResult> Get_ApplicationJson_Dictionary_KeyValuePair(
             [HttpTrigger(AuthorizationLevel.Anonymous, "GET", Route = "get-applicationjson-dictionary-keyvaluepair")] HttpRequest req,
+            ILogger log)
+        {
+            var result = new OkResult();
+
+            return await Task.FromResult(result).ConfigureAwait(false);
+        }
+
+        [FunctionName(nameof(Get_ApplicationJson_Dictionary_HttpTrigger.Get_ApplicationJson_NameDictionary))]
+        [OpenApiOperation(operationId: nameof(Get_ApplicationJson_Dictionary_HttpTrigger.Get_ApplicationJson_NameDictionary), tags: new[] { "dictionary" })]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(DictionaryStringObjectModel), Description = "The OK response")]
+        public static async Task<IActionResult> Get_ApplicationJson_NameDictionary(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "GET", Route = "get-applicationjson-nameddictionary")] HttpRequest req,
             ILogger log)
         {
             var result = new OkResult();

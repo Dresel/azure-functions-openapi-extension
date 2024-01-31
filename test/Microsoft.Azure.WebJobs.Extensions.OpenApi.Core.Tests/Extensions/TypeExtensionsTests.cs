@@ -38,6 +38,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Extensions
         [DataRow(typeof(IDictionary<string, string>), false)]
         [DataRow(typeof(IReadOnlyDictionary<string, string>), false)]
         [DataRow(typeof(KeyValuePair<string, string>), false)]
+        [DataRow(typeof(FakeDictionary), false)]
         public void Given_ArrayTypes_When_IsOpenApiArray_Invoked_Then_It_Should_Return_Result(Type type, bool expected)
         {
             var result = TypeExtensions.IsOpenApiArray(type);
@@ -65,6 +66,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Extensions
         [DataRow(typeof(IDictionary<string, string>), true)]
         [DataRow(typeof(IReadOnlyDictionary<string, string>), true)]
         [DataRow(typeof(KeyValuePair<string, string>), true)]
+        [DataRow(typeof(FakeDictionary), false)]
         public void Given_DictionaryTypes_When_IsOpenApiDictionary_Invoked_Then_It_Should_Return_Result(Type type, bool expected)
         {
             var result = TypeExtensions.IsOpenApiDictionary(type);
@@ -145,6 +147,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Extensions
         [DataRow(typeof(Dictionary<string, int>), typeof(int))]
         [DataRow(typeof(Dictionary<string, bool>), typeof(bool))]
         [DataRow(typeof(Dictionary<string, FakeModel>), typeof(FakeModel))]
+        [DataRow(typeof(FakeDictionary), typeof(FakeModel))]
         public void Given_DictionaryType_When_GetUnderlyingType_Invoked_Then_It_Should_Return_Result(Type type, Type expected)
         {
             var result = TypeExtensions.GetUnderlyingType(type);

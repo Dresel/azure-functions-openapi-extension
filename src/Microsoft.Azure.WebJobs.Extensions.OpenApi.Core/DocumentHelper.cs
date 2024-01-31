@@ -135,7 +135,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core
             var responses = elements.SelectMany(p => p.GetCustomAttributes<OpenApiResponseWithBodyAttribute>(inherit: false))
                                     .Select(p => p.BodyType);
             var types = requests.Union(responses)
-                                .SelectMany(p => p.IsReferencedOpenApiArray() ? new[] { p, p.GetOpenApiSubType() } :
+                                .SelectMany(p => p.IsReferencedOpenApiArray() || p.IsReferencedOpenApiDictionary() ? new[] { p, p.GetOpenApiSubType() } :
                                     p.IsOpenApiArray() || p.IsOpenApiDictionary() ? new [] { p.GetOpenApiSubType() } : new[] { p })
                                 .Distinct()
                                 .Where(p => !p.IsSimpleType())

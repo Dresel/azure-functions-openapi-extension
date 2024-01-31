@@ -355,6 +355,21 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions
         }
 
         /// <summary>
+        /// Checks whether the given type is an array type that should be referenced or not, from the OpenAPI perspective.
+        /// </summary>
+        /// <param name="type"><see cref="Type"/> instance.</param>
+        /// <returns>Returns <c>True</c>, if the type is identified as array; otherwise returns <c>False</c>.</returns>
+        public static bool IsReferencedOpenApiDictionary(this Type type)
+        {
+            if (type.IsNullOrDefault())
+            {
+                return false;
+            }
+
+            return type.IsInheritedDictionaryType();
+        }
+
+        /// <summary>
         /// Checks whether the given type is nullable or not.
         /// </summary>
         /// <param name="type">Type to check.</param>
@@ -480,9 +495,9 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions
                 underlyingType = type.GetElementType() ?? type.GetArrayTypeGenericArgument();
             }
 
-            if (type.IsOpenApiDictionary())
+            if (type.IsOpenApiDictionary() || type.IsReferencedOpenApiDictionary())
             {
-                underlyingType = type.GetGenericArguments()[1];
+                underlyingType = type.GetDictionaryTypeGenericArgument();
             }
 
             if (underlyingType.IsOpenApiNullable(out var nullableUnderlyingTypeOfUnderlyingType))
@@ -564,9 +579,9 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions
         /// <returns>Returns the sub type of the given <see cref="Type"/>.</returns>
         public static Type GetOpenApiSubType(this Type type)
         {
-            if (type.IsDictionaryType())
+            if (type.IsDictionaryType() || type.IsInheritedDictionaryType())
             {
-                return type.GetGenericArguments()[1];
+                return type.GetDictionaryTypeGenericArgument();
             }
 
             if (type.BaseType == typeof(Array))
@@ -595,9 +610,9 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions
                 namingStrategy = new DefaultNamingStrategy();
             }
 
-            if (type.IsDictionaryType())
+            if (type.IsDictionaryType() || type.IsInheritedDictionaryType())
             {
-                var name = type.GetGenericArguments()[1].Name;
+                var name = type.GetDictionaryTypeGenericArgument().Name;
 
                 return namingStrategy.GetPropertyName(name, hasSpecifiedName: false);
             }
@@ -769,49 +784,80 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions
                 .GetGenericArguments()[0];
         }
 
+        private static Type GetDictionaryTypeGenericArgument(this Type type)
+        {
+            // Type is either KeyValuePair`2 or a type implementing IEnumerable<KeyValuePair`2>
+            return type.IsGenericType? type.GetGenericArguments()[1] :
+                   type.GetArrayTypeGenericArgument().GetGenericArguments()[1];
+        }
+
+        private static bool IsEnumerableType(this Type type)
+        {
+            return type.Name.Equals("String", StringComparison.InvariantCultureIgnoreCase) == false &&
+                   type.GetInterfaces()
+                       .Where(p => p.IsInterface)
+                       .Where(p => p.Name.Equals("IEnumerable", StringComparison.InvariantCultureIgnoreCase) == true)
+                       .Any();
+        }
+
         private static bool IsArrayType(this Type type)
         {
-            var isArrayType = type.Name.Equals("String", StringComparison.InvariantCultureIgnoreCase) == false &&
-                              type.Namespace?.StartsWith("System") == true &&
-                              type.GetInterfaces()
-                                  .Where(p => p.IsInterface)
-                                  .Where(p => p.Name.Equals("IEnumerable", StringComparison.InvariantCultureIgnoreCase) == true)
-                                  .Any() &&
+            var isArrayType = type.Namespace?.StartsWith("System") == true &&
+                              type.IsEnumerableType() &&
                               type.IsJObjectType() == false &&
-                              type.IsDictionaryType() == false;
+                              type.IsDictionaryType() == false &&
+                              type.IsInheritedDictionaryType() == false;
 
             return isArrayType;
         }
 
         private static bool IsInheritedArrayType(this Type type)
         {
-            var isArrayType = type.Name.Equals("String", StringComparison.InvariantCultureIgnoreCase) == false &&
-                              type.Namespace?.StartsWith("System") != true &&
-                              type.GetInterfaces()
-                                  .Where(p => p.IsInterface)
-                                  .Where(p => p.Name.Equals("IEnumerable", StringComparison.InvariantCultureIgnoreCase) == true)
-                                  .Any() &&
+            var isArrayType = type.Namespace?.StartsWith("System") != true &&
+                              type.IsEnumerableType() &&
                               type.IsJObjectType() == false &&
-                              type.IsDictionaryType() == false;
+                              type.IsDictionaryType() == false &&
+                              type.IsInheritedDictionaryType() == false;
 
             return isArrayType;
         }
 
-        private static HashSet<string> dictionaries = new HashSet<string>
+        private static bool IsDictionaryType(this Type type)
         {
-            "Dictionary`2",
-            "IDictionary`2",
-            "IReadOnlyDictionary`2",
-            "KeyValuePair`2",
-        };
+            if (type.Namespace?.StartsWith("System") != true)
+            {
+                return false;
+            }
 
-        private static bool IsDictionaryType(this Type type, bool useFullName = false)
+            if (type.IsKeyValuePairTypeWithKeyString())
+            {
+                return true;
+            }
+
+            if (!type.IsEnumerableType() || type.Name == "Array")
+            {
+                return false;
+            }
+
+            return type.GetArrayTypeGenericArgument()
+                       .IsKeyValuePairTypeWithKeyString();
+        }
+
+        private static bool IsInheritedDictionaryType(this Type type, bool useFullName = false)
         {
-            
-            var isDictionaryType = type.IsGenericType &&
-                                   dictionaries.Any(p => GetTypeName(type, useFullName).Equals(p, StringComparison.InvariantCultureIgnoreCase) == true);
+            var isDictionaryType = type.Namespace?.StartsWith("System") != true &&
+                                   type.IsEnumerableType() &&
+                                   type.GetArrayTypeGenericArgument()
+                                       .IsKeyValuePairTypeWithKeyString();
 
             return isDictionaryType;
+        }
+
+        private static bool IsKeyValuePairTypeWithKeyString(this Type type)
+        {
+            return type.IsGenericType &&
+                   type.GetGenericTypeDefinition().Name == "KeyValuePair`2" &&
+                   type.GetGenericArguments()[0] == typeof(string);
         }
 
         private static bool IsNullableType(this Type type, out Type underlyingType)

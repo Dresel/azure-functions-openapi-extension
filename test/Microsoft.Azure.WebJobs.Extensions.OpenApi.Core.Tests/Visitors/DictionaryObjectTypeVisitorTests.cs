@@ -52,6 +52,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Visitors
         [DataRow(typeof(IDictionary<string, string>), true)]
         [DataRow(typeof(IReadOnlyDictionary<string, string>), true)]
         [DataRow(typeof(KeyValuePair<string, string>), true)]
+        [DataRow(typeof(FakeDictionary), true)]
         [DataRow(typeof(int), false)]
         public void Given_Type_When_IsVisitable_Invoked_Then_It_Should_Return_Result(Type type, bool expected)
         {
@@ -66,6 +67,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Visitors
         [DataRow(typeof(IDictionary<string, string>), false)]
         [DataRow(typeof(IReadOnlyDictionary<string, string>), false)]
         [DataRow(typeof(KeyValuePair<string, string>), false)]
+        [DataRow(typeof(FakeDictionary), false)]
         [DataRow(typeof(int), false)]
         public void Given_Type_When_IsParameterVisitable_Invoked_Then_It_Should_Return_Result(Type type, bool expected)
         {
@@ -80,6 +82,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Visitors
         [DataRow(typeof(IDictionary<string, string>), true)]
         [DataRow(typeof(IReadOnlyDictionary<string, string>), true)]
         [DataRow(typeof(KeyValuePair<string, string>), true)]
+        [DataRow(typeof(FakeDictionary), true)]
         [DataRow(typeof(int), false)]
         public void Given_Type_When_IsPayloadVisitable_Invoked_Then_It_Should_Return_Result(Type type, bool expected)
         {
@@ -98,6 +101,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Visitors
         [DataRow(typeof(IDictionary<string, FakeModel>), "object", null, "object", true, "fakeModel", 1)]
         [DataRow(typeof(IReadOnlyDictionary<string, FakeModel>), "object", null, "object", true, "fakeModel", 1)]
         [DataRow(typeof(KeyValuePair<string, FakeModel>), "object", null, "object", true, "fakeModel", 1)]
+        [DataRow(typeof(FakeDictionary), "object", null, "string", true, "fakeModel", 1)]
         public void Given_Type_When_Visit_Invoked_Then_It_Should_Return_Result(Type dictionaryType, string dataType, string dataFormat, string additionalPropertyType, bool isReferential, string referenceId, int expected)
         {
             var name = "hello";
@@ -194,6 +198,21 @@ namespace Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.Visitors
             {
                 result.AdditionalProperties.Reference.Should().BeNull();
             }
+        }
+
+        [DataTestMethod]
+        [DataRow(typeof(FakeDictionary), "fakeDictionary")]
+        public void Given_ReferencedType_When_PayloadVisit_Invoked_Then_It_Should_Return_Result(Type listType, string referenceId)
+        {
+            var result = this._visitor.PayloadVisit(listType, this._strategy, this._options.UseFullName);
+
+            result.Type.Should().BeNull();
+            result.Format.Should().BeNull();
+
+            result.Items.Should().BeNull();
+
+            result.Reference.Type.Should().Be(ReferenceType.Schema);
+            result.Reference.Id.Should().Be(referenceId);
         }
 
         [DataTestMethod]
